@@ -51,3 +51,24 @@ ExternalProject_Add(zcm
   BUILD_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf
   INSTALL_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf install
 )
+
+set(ARDUINO_SDK_PATH ${build_dir}/src/arduino)
+ExternalProject_Add(arduino
+  URL https://downloads.arduino.cc/arduino-1.8.5-linux64.tar.xz
+  URL_MD5 a95fa15b88b8dc4ddb79ac28665f763b
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND ""
+)
+
+
+ExternalProject_Add(src_arduino
+  SOURCE_DIR ${source_dir}/src_arduino
+  BINARY_DIR ${build_dir}/src_arduino
+  BUILD_ALWAYS 1
+  CMAKE_CACHE_ARGS
+    ${CMAKE_ARGS_FOR_EXTERNALS}
+    -DARDUINO_SDK_PATH:STRING=${ARDUINO_SDK_PATH}
+  INSTALL_COMMAND ""
+  DEPENDS arduino zcm
+)

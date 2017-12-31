@@ -1,0 +1,12 @@
+[submodule "src/externals/zcm"]
+	path = src/externals/zcm
+	url = https://github.com/ZeroCM/zcm
+[submodule "cmake/arduino-cmake"]
+	path = cmake/arduino-cmake
+	url = https://github.com/arduino-cmake/arduino-cmake
+[submodule "src_arduino/cmake/arduino-cmake"]
+	path = src_arduino/cmake/arduino-cmake
+	url = https://github.com/arduino-cmake/arduino-cmake
+[submodule "src_arduino/arduino-cmake"]
+	path = src_arduino/arduino-cmake
+	url = https://github.com/arduino-cmake/arduino-cmake
