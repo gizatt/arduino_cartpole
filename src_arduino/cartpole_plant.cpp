@@ -2,28 +2,19 @@
 
 #include "time_utils.h"
 
-// #include "zcm/zcm.h"
-// #include "zcm/transport/generic_serial_transport.h"
-// #include "mithl/vectorXf_t.hpp"
-
-// z acc: a3
-// y acc: a4
-// xrate: a5
-
+// Analog pins connected to IMU
 int PIN_Z_ACC = 3;
 int PIN_Y_ACC = 4;
 int PIN_X_RATE = 5;
 
+// Motor control pins from motor control
+// shield
 int PIN_MOTOR_A_PWM = 3;
 int PIN_MOTOR_B_PWM = 11;
 int PIN_MOTOR_A_DIR = 12;
 int PIN_MOTOR_B_DIR = 13;
 
-int PIN_ZERO_BUTTON = 9;
-int PIN_POT = 0;
-
 #define PUBLISH_PERIOD 0.033
-
 
 double last_update;
 double start_time;
@@ -50,11 +41,10 @@ struct CartpoleData {
   float est_angle_pred;
   float est_angle_meas;
 
-  float last_pot_setting;
+  float last_pot_setting; // defunct
   float zero_angle_setting;
   float zero_angle_adjusted;
 };
-
 CartpoleData data;
 
 void send_IMU_struct() {
@@ -64,14 +54,6 @@ void send_IMU_struct() {
   return;
 }
 
-void doUpdateInterface(){
-  // doesn't work... bad pins?
-  int zero_button = digitalRead(PIN_ZERO_BUTTON);
-  if (zero_button){
-    data.zero_angle_setting = data.est_angle;
-  }
-  data.last_pot_setting = ((float)analogRead(PIN_POT)) / 1024. * 5.; // Scale 0-1
-}
 
 void doUpdateAccelerations(float dt){
   // 300 mv / g
@@ -111,8 +93,6 @@ void doUpdateGyro(float dt){
 
 #define EST_ANGLE_VEL_RC 0.01
 #define DRIVE_COMMAND_LP_RC 0.1
-//#define ZERO_ANGLE_RC 0.01
-//#define ZERO_ANGLE_DURATION 2.0
 void doStateEstimate(float dt){
   doUpdateAccelerations(dt);
   doUpdateGyro(dt);
@@ -133,16 +113,9 @@ void doStateEstimate(float dt){
   data.est_pos += dt * data.drive_command;
   alpha = dt / (dt + DRIVE_COMMAND_LP_RC);
   data.drive_command_lp = (1. - alpha) * data.drive_command_lp + alpha * data.drive_command;
-  /*
-  if (get_current_time() - start_time < ZERO_ANGLE_DURATION){
-    alpha = dt / (dt + ZERO_ANGLE_RC);
-    data.zero_angle_setting = (1. - alpha) * data.zero_angle_setting + alpha * data.est_angle;
-  }
-  */
 }
 
 #define SPEED_DEADZONE_HWIDTH 0.3
-//#define SPEED_PWM_PERIOD 0.0
 void setDriveCommand(float speed, bool linearize = true){
   // Bounded on range -1, 1
   speed = fmin(fmax(speed, -1.), 1.);
@@ -150,27 +123,18 @@ void setDriveCommand(float speed, bool linearize = true){
   if (linearize){
     // Apply adjustment to speed to counter the motor nonlinearities
     
-    // Adjust #1: Motor has deadzone in [-0.3, 0.3],
-    // especially when already spinning slowly.
+    // Adjust #1: Motor has deadzone around zero.
     // Remove this by pushing speeds outward into the range
     // [DEADZONE_HWIDTH, 1.0]
+    // This *doesn't* account for the hysteresis of the
+    // stiction causing this problem -- this'll compensate
+    // well for starting from stopped, but not compensate well
+    // for decreasing speed when the wheel is already moving.
     if (adjusted_speed > 0){
       adjusted_speed = adjusted_speed * (1. - SPEED_DEADZONE_HWIDTH) + SPEED_DEADZONE_HWIDTH;
     } else {
       adjusted_speed = adjusted_speed * (1. - SPEED_DEADZONE_HWIDTH) - SPEED_DEADZONE_HWIDTH;
     }
-/*
-    // Adjust #2: Motor has low torque at low PWM settings.
-    // Hack around this by doing longer-timescale PWM on the motor
-    // to allow better ramp up (in exchange for some bad dynamics)
-    float adjusted_pwm_period = SPEED_PWM_PERIOD * fabs(adjusted_speed);
-    double now = get_current_time();
-    int period_count = floor(now / SPEED_PWM_PERIOD);
-    float pwm_period = now - ((float)period_count) * SPEED_PWM_PERIOD;
-    if (adjusted_pwm_period <= pwm_period){
-      adjusted_speed = 0.;
-    }
-    */
   }
   analogWrite(PIN_MOTOR_A_PWM, (int)(255.*fabs(adjusted_speed)));
   analogWrite(PIN_MOTOR_B_PWM, (int)(255.*fabs(adjusted_speed)));
@@ -185,22 +149,24 @@ void setDriveCommand(float speed, bool linearize = true){
 }
 
 void doControl(){
+  // If the robot is on its side, zero out control and reset
+  // position integrator.
   if (fabs(data.zero_angle_setting - data.est_angle) >= 0.3){
     setDriveCommand(0.0, false); // quiet down
     data.est_pos = 0.0;
   } else {
-    // Setpoint outer loop
+    // Setpoint outer loop -- control back to original
+    // position, and also create a bias against the
+    // direction we're been driving in the recent past
     float pos_error = 0.1 * data.est_pos +
       1.0 * data.drive_command_lp;
     pos_error = fmin(fmax(pos_error, -0.1), 0.1);
     data.zero_angle_adjusted = data.zero_angle_setting + pos_error;
 
-    // Angle tracking inner loop
+    // Angle tracking inner loop -- PD control
     float angle_error = data.zero_angle_adjusted - data.est_angle;
     float drive_command = angle_error * 2.0 
       - 0.20 * data.est_angle_vel;
-    //double t = get_current_time() - start_timez;
-    //drive_command = sin(t / (2 * 3.1412 / 2.));
     setDriveCommand(drive_command); 
   }
 }
@@ -236,8 +202,6 @@ void loop() {
   doControl();
 
   last_update = now;
-
-  //doUpdateInterface();
 
   if (now - last_publish_time > PUBLISH_PERIOD){
     send_IMU_struct();
