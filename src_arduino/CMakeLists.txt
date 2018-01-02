@@ -5,8 +5,17 @@ message("Arduino SDK path " ${ARDUINO_SDK_PATH})
 
 project(cartpole_src_arduino)
 
-generate_arduino_firmware(blink
-        SRCS blink.cpp
+include_directories(${CMAKE_SOURCE_DIR})
+
+generate_arduino_library(zcm_c
+        SRCS zcm/zcm.c zcm/nonblocking.c zcm/transport/generic_serial_transport.c
+        HDRS zcm/zcm.h zcm/zcm_coretypes.h zcm/nonblocking.h zcm/transport.h zcm/zcm_private.h zcm/transport/generic_serial_transport.h
+        BOARD uno)
+
+generate_arduino_firmware(cartpole_plane
+        SRCS cartpole_plant.cpp time_utils.h
+        LIBS zcm_c 
         BOARD uno
-        PORT /dev/ttyACM0
+        PORT /dev/cartpole_uno
         )
+
