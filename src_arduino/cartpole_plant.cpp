@@ -177,8 +177,7 @@ void setup() {
   pinMode(PIN_MOTOR_B_PWM, OUTPUT);
   pinMode(PIN_MOTOR_A_DIR, OUTPUT);
   pinMode(PIN_MOTOR_B_DIR, OUTPUT);
-  pinMode(PIN_ZERO_BUTTON, INPUT);
-
+  
   // Uninitialized values
   data.x_rate_offset = -1.0;
   // Expected ~1.5V offset in imu

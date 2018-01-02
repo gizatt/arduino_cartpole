@@ -41,16 +41,18 @@ set(CMAKE_ARGS_FOR_EXTERNALS
   -DCMAKE_VERBOSE_MAKEFILE:BOOL=${CMAKE_VERBOSE_MAKEFILE}
 )
 
-ExternalProject_Add(zcm
-  SOURCE_DIR ${build_dir}/externals/zcm
-  BINARY_DIR ${build_dir}/zcm
-  GIT_REPOSITORY https://github.com/ZeroCM/zcm
-  GIT_TAG f7ba28ef8d16183065a3296d25189c78142b50c4
-  BUILD_ALWAYS 1
-  CONFIGURE_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf configure --use-serial --use-udpm --prefix=${build_dir}
-  BUILD_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf
-  INSTALL_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf install
-)
+if (0)
+  ExternalProject_Add(zcm
+    SOURCE_DIR ${build_dir}/externals/zcm
+    BINARY_DIR ${build_dir}/zcm
+    GIT_REPOSITORY https://github.com/ZeroCM/zcm
+    GIT_TAG f7ba28ef8d16183065a3296d25189c78142b50c4
+    BUILD_ALWAYS 1
+    CONFIGURE_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf configure --use-serial --use-udpm --prefix=${build_dir}
+    BUILD_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf
+    INSTALL_COMMAND cd ${build_dir}/externals/zcm/ && ${build_dir}/externals/zcm/waf install
+  )
+endif()
 
 set(ARDUINO_SDK_PATH ${build_dir}/src/arduino)
 ExternalProject_Add(arduino
@@ -70,5 +72,5 @@ ExternalProject_Add(src_arduino
     ${CMAKE_ARGS_FOR_EXTERNALS}
     -DARDUINO_SDK_PATH:STRING=${ARDUINO_SDK_PATH}
   INSTALL_COMMAND ""
-  DEPENDS arduino zcm
+  DEPENDS arduino
 )
